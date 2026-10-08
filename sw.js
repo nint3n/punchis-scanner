@@ -1,9 +1,9 @@
-var CACHE_NAME = 'punchis-scanner-v1';
+var CACHE_NAME = 'punchis-scanner-v2';
 var URLS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/app.js',
-  '/manifest.json',
+  './',
+  './index.html',
+  './app.js',
+  './manifest.json',
   'https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js'
 ];
