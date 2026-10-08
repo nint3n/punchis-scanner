@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PUNCHIS SCANNER</title>
+  <meta name="theme-color" content="#080208">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="PunchisQR">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --purple: #00E5FF;
+      --purple-light: #67F0FF;
+      --green: #00E5FF;
+      --red: #E8193B;
+      --yellow: #D946EF;
+      --bg-deep: #080208;
+      --bg-card: #110810;
+      --bg-surface: #1A0D14;
+      --text-primary: #F0E8EC;
+      --text-muted: rgba(255,200,220,0.4);
+      --border-glow: rgba(0,229,255,0.3);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, sans-serif;
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: var(--bg-card);
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-glow);
+      flex-shrink: 0;
+      position: relative;
+      z-index: 10;
+    }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .header-logo {
+      font-family: 'Orbitron', monospace;
+      font-size: 15px;
+      font-weight: 900;
+      color: var(--purple);
+      letter-spacing: 1.5px;
+    }
+    .header-badge {
+      font-size: 9px;
+      font-weight: 700;
+      background: rgba(232,25,59,0.2);
+      border: 1px solid #E8193B;
+      color: #E8193B;
+      padding: 3px 10px;
+      border-radius: 50px;
+      letter-spacing: 1px;
+    }
+    .btn-config {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.15);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .btn-config:active { border-color: var(--purple); }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      background: var(--bg-card);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0;
+    }
+    .tab {
+      flex: 1;
+      padding: 12px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+      letter-spacing: 0.5px;
+    }
+    .tab.active {
+      color: var(--purple-light);
+      border-bottom-color: var(--purple);
+      background: rgba(0,229,255,0.05);
+    }
+
+    /* ── Main Content ── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+    .view { display: none; flex: 1; flex-direction: column; }
+    .view.active { display: flex; }
+
+    /* ── Scanner View ── */
+    .scanner-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      gap: 16px;
+    }
+    .scanner-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      text-align: center;
+    }
+    #reader {
+      width: 100%;
+      max-width: 340px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 2px solid var(--border-glow);
+      box-shadow: 0 0 40px rgba(0,229,255,0.15);
+      background: var(--bg-surface);
+    }
+    #reader video { border-radius: 14px; }
+
+    .scan-counter {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .scan-counter strong { color: var(--purple-light); font-size: 18px; }
+
+    /* ── Result Overlay ── */
+    .result-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.88);
+      z-index: 50;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      animation: fadeIn 0.2s ease;
+    }
+    .result-overlay.show { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .result-card {
+      width: 100%;
+      max-width: 380px;
+      background: var(--bg-card);
+      border-radius: 24px;
+      overflow: hidden;
+      border: 2px solid var(--border-glow);
+      box-shadow: 0 0 60px rgba(0,229,255,0.2);
+      animation: slideUp 0.3s ease;
+    }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+    .result-status {
+      padding: 24px 20px 16px;
+      text-align: center;
+    }
+    .status-icon { font-size: 48px; margin-bottom: 8px; }
+    .status-text {
+      font-family: 'Orbitron', monospace;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+    .status-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+    .result-status.approved { background: linear-gradient(180deg, rgba(0,229,255,0.15) 0%, transparent 100%); }
+    .result-status.approved .status-text { color: var(--green); }
+    .result-status.pending { background: linear-gradient(180deg, rgba(217,70,239,0.15) 0%, transparent 100%); }
+    .result-status.pending .status-text { color: var(--yellow); }
+    .result-status.rejected { background: linear-gradient(180deg, rgba(232,25,59,0.15) 0%, transparent 100%); }
+    .result-status.rejected .status-text { color: var(--red); }
+    .result-status.not-found { background: linear-gradient(180deg, rgba(232,25,59,0.15) 0%, transparent 100%); }
+    .result-status.not-found .status-text { color: var(--red); }
+    .result-status.checked-in { background: linear-gradient(180deg, rgba(217,70,239,0.15) 0%, transparent 100%); }
+    .result-status.checked-in .status-text { color: #D946EF; }
+
+    .result-body { padding: 0 20px 20px; }
+    .result-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--purple-light);
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .info-grid {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px;
+      padding: 4px 14px;
+      margin-bottom: 20px;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 13px;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: var(--text-muted); }
+    .info-val { font-weight: 600; }
+
+    .result-actions { display: flex; gap: 10px; }
+    .btn-action {
+      flex: 1;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: transform 0.1s;
+    }
+    .btn-action:active { transform: scale(0.97); }
+    .btn-scan-next {
+      background: linear-gradient(135deg, #E8193B, #00E5FF);
+      color: #fff;
+    }
+    .btn-checkin {
+      background: rgba(0,229,255,0.2);
+      border: 1px solid var(--green);
+      color: var(--green);
+    }
+
+    /* ── History View ── */
+    .history-view { padding: 16px; gap: 8px; overflow-y: auto; }
+    .history-empty {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      text-align: center;
+    }
+    .history-item {
+      background: var(--bg-card);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .hi-status {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .hi-status.s-approved { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .hi-status.s-pending { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+    .hi-status.s-rejected { background: var(--red); box-shadow: 0 0 8px var(--red); }
+    .hi-status.s-not-found { background: #553333; }
+    .hi-status.s-checked-in { background: #D946EF; box-shadow: 0 0 8px #D946EF; }
+    .hi-info { flex: 1; min-width: 0; }
+    .hi-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hi-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .hi-time { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+
+    /* ── Stats View ── */
+    .stats-view { padding: 16px; gap: 12px; overflow-y: auto; }
+    .stat-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px;
+      padding: 16px;
+      text-align: center;
+    }
+    .stat-num { font-family: 'Orbitron', monospace; font-size: 28px; font-weight: 900; }
+    .stat-label { font-size: 10px; color: var(--text-muted); margin-top: 4px; letter-spacing: 1px; text-transform: uppercase; }
+    .stat-card.purple .stat-num { color: var(--purple-light); }
+    .stat-card.green .stat-num { color: var(--green); }
+    .stat-card.yellow .stat-num { color: var(--yellow); }
+    .stat-card.red .stat-num { color: var(--red); }
+
+    .stats-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 8px;
+    }
+    .recent-list { display: flex; flex-direction: column; gap: 6px; }
+
+    /* ── Config Modal ── */
+    .modal-bg {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-bg.show { display: flex; }
+    .modal-box {
+      background: var(--bg-card);
+      border: 1px solid var(--purple);
+      border-radius: 20px;
+      padding: 24px;
+      width: 100%;
+      max-width: 360px;
+    }
+    .modal-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--purple-light);
+      margin-bottom: 4px;
+    }
+    .modal-desc { font-size: 11px; color: var(--text-muted); margin-bottom: 16px; }
+    .input-field {
+      width: 100%;
+      padding: 12px 14px;
+      background: var(--bg-deep);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 13px;
+      margin-bottom: 12px;
+      font-family: 'Inter', sans-serif;
+    }
+    .input-field:focus { outline: none; border-color: var(--purple); }
+    .input-label { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; display: block; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 8px; }
+    .btn-modal {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .btn-save { background: linear-gradient(135deg, #E8193B, #00E5FF); color: #fff; }
+    .btn-cancel { background: rgba(255,255,255,0.08); color: var(--text-muted); }
+    .btn-test {
+      width: 100%;
+      padding: 10px;
+      background: rgba(0,229,255,0.1);
+      border: 1px solid var(--purple);
+      border-radius: 10px;
+      color: var(--purple-light);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 12px;
+    }
+    .test-result {
+      font-size: 11px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      display: none;
+    }
+    .test-ok { display: block; background: rgba(0,229,255,0.1); color: var(--green); border: 1px solid rgba(0,229,255,0.3); }
+    .test-fail { display: block; background: rgba(232,25,59,0.15); color: var(--red); border: 1px solid rgba(232,25,59,0.3); }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--bg-card);
+      border: 1px solid var(--border-glow);
+      border-radius: 12px;
+      padding: 10px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      z-index: 200;
+      opacity: 0;
+      transition: all 0.3s ease;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── Offline Banner ── */
+    .offline-banner {
+      display: none;
+      background: rgba(232,25,59,0.2);
+      border-bottom: 1px solid var(--red);
+      color: var(--red);
+      text-align: center;
+      padding: 6px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .offline-banner.show { display: block; }
+  </style>
+</head>
+<body>
+
+  <!-- Offline Banner -->
+  <div id="offline-banner" class="offline-banner">SIN CONEXION — Los escaneos se guardan localmente</div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <span class="header-logo">PUNCHIS QR</span>
+      <span class="header-badge">SCANNER</span>
+    </div>
+    <button class="btn-config" onclick="openConfig()">&#9881;</button>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" data-tab="scanner" onclick="switchTab('scanner')">&#128247; Escanear</div>
+    <div class="tab" data-tab="history" onclick="switchTab('history')">&#128203; Historial</div>
+    <div class="tab" data-tab="stats" onclick="switchTab('stats')">&#128202; Stats</div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Scanner View -->
+    <div id="view-scanner" class="view active">
+      <div class="scanner-area">
+        <div class="scanner-hint">Apunta la camara al codigo QR del boleto</div>
+        <div id="reader"></div>
+        <div class="scan-counter">
+          Escaneos hoy: <strong id="scan-count">0</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- History View -->
+    <div id="view-history" class="view">
+      <div class="history-view" id="history-list">
+        <div class="history-empty" id="history-empty">Aun no has escaneado boletos</div>
+      </div>
+    </div>
+
+    <!-- Stats View -->
+    <div id="view-stats" class="view">
+      <div class="stats-view">
+        <div class="stats-title">Resumen de sesion</div>
+        <div class="stat-cards">
+          <div class="stat-card purple">
+            <div class="stat-num" id="stat-total">0</div>
+            <div class="stat-label">Total</div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-num" id="stat-approved">0</div>
+            <div class="stat-label">Aprobados</div>
+          </div>
+          <div class="stat-card yellow">
+            <div class="stat-num" id="stat-pending">0</div>
+            <div class="stat-label">Pendientes</div>
+          </div>
+          <div class="stat-card red">
+            <div class="stat-num" id="stat-rejected">0</div>
+            <div class="stat-label">Rechazados</div>
+          </div>
+        </div>
+        <div class="stats-title" style="margin-top:20px;">Ultimos escaneos</div>
+        <div class="recent-list" id="recent-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Result Overlay -->
+  <div id="result-overlay" class="result-overlay">
+    <div class="result-card">
+      <div id="result-status" class="result-status">
+        <div id="result-icon" class="status-icon"></div>
+        <div id="result-text" class="status-text"></div>
+        <div id="result-sub" class="status-sub"></div>
+      </div>
+      <div class="result-body">
+        <div id="result-name" class="result-name"></div>
+        <div class="info-grid">
+          <div class="info-row">
+            <span class="info-label">Ticket ID</span>
+            <span id="r-ticket-id" class="info-val" style="font-family:monospace;color:var(--purple-light);"></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Boletos</span>
+            <span id="r-qty" class="info-val"></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Evento</span>
+            <span id="r-event" class="info-val"></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Lugar</span>
+            <span id="r-venue" class="info-val"></span>
+          </div>
+        </div>
+        <div class="result-actions">
+          <button class="btn-action btn-scan-next" onclick="closeResult()">&#128247; Siguiente</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Config Modal -->
+  <div id="config-modal" class="modal-bg">
+    <div class="modal-box">
+      <div class="modal-title">Configuracion</div>
+      <div class="modal-desc">Conecta con tu API de Google Apps Script</div>
+
+      <label class="input-label">URL de la Web App</label>
+      <input type="url" id="cfg-url" class="input-field" placeholder="https://script.google.com/macros/s/.../exec">
+
+      <button class="btn-test" onclick="testConnection()">Probar Conexion</button>
+      <div id="test-result" class="test-result"></div>
+
+      <label class="input-label">Nombre del staff (opcional)</label>
+      <input type="text" id="cfg-staff" class="input-field" placeholder="Nombre del operador">
+
+      <div class="modal-actions">
+        <button class="btn-modal btn-cancel" onclick="closeConfig()">Cancelar</button>
+        <button class="btn-modal btn-save" onclick="saveConfig()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(function () {});
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "name": "PUNCHIS QR Scanner",
+  "short_name": "PunchisQR",
+  "description": "Escaner de boletos QR para eventos PUNCHIS PUNCHIS",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#080208",
+  "theme_color": "#080208",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
